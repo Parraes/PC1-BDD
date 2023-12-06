@@ -1,6 +1,15 @@
 # Dependencias
 from PyQt6.QtWidgets import QApplication, QDialog, QGridLayout, QLabel, QLineEdit, QSpinBox, QPushButton, QFileDialog, QWidget, QTextEdit
 from PyQt6.QtCore import Qt
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.common.action_chains import ActionChains
+from selenium.webdriver.common.keys import Keys
+from selenium.common.exceptions import ElementNotInteractableException, NoSuchElementException
+from bs4 import BeautifulSoup
+import requests
+import openpyxl
+import time
 import os
 
 class SimpleWindow(QDialog):
@@ -24,13 +33,13 @@ class SimpleWindow(QDialog):
         layout.addWidget(label_number, 0, 0)
 
         # Estilos input numero jornada
-        number_input = QSpinBox(self)
-        number_input.setMinimum(1)  # Establecer el valor mínimo (jornada 1)
-        number_input.setMaximum(38)  # Establecer el valor máximo (Jornada 36)
-        number_input.setSingleStep(2)  # Establecer el paso
-        number_input.setMaximumSize(38, 20)
-        number_input.setMinimumSize(38, 20)
-        layout.addWidget(number_input, 0, 1)
+        self.number_input = QSpinBox(self)
+        self.number_input.setMinimum(1)  # Establecer el valor mínimo (jornada 1)
+        self.number_input.setMaximum(38)  # Establecer el valor máximo (Jornada 36)
+        self.number_input.setSingleStep(2)  # Establecer el paso
+        self.number_input.setMaximumSize(38, 20)
+        self.number_input.setMinimumSize(38, 20)
+        layout.addWidget(self.number_input, 0, 1)
         
 
         #------- GAP vacio -----------------------------------------
@@ -73,7 +82,7 @@ class SimpleWindow(QDialog):
         scrape_button.clicked.connect(self.scrapear_funcion)
 
         layout.addWidget(scrape_button, 5, 0)
-
+    
 
         ###  VENTANA OUTPUT SCRAPER  ####################################################
         # Crear un QTextEdit para la salida
@@ -109,9 +118,58 @@ class SimpleWindow(QDialog):
         # Realizar cualquier limpieza necesaria aquí
         QApplication.quit()
 
+    def click_mas(self):
+        # Pinchar en el botón del menu "Más"
+        masMenu = self.driver.find_element(By.XPATH, '//*[@id="content"]/header/div[2]/ul/li[5]/a')
+
+        try:
+            masMenu.click()
+        except (ElementNotInteractableException, NoSuchElementException):
+            # Maneja la excepción y espera antes de intentar nuevamente
+            print("Anuncio detectado, reiniciando driver...")
+            self.driver.refresh()
+            time.sleep(3) 
+            masMenu.click()
+
     def scrapear_funcion(self):
-        # Agregar texto al QTextEdit
-        self.output_textedit.append("¡Se hizo clic en el botón Scrapear!")
+        self.output_textedit.append("Starting scraper...")
+
+        # Obtener el valor de la jornada desde el QSpinBox
+        jornada_a_scrapear = self.number_input.value()
+        # Mostrar el valor en el QTextEdit
+        self.output_textedit.append(f"Jornada seleccionada: {jornada_a_scrapear}")
+
+        ruta_output = self.text_input.text()
+        # Hacer lo que necesites con la ruta de salida
+        self.output_textedit.append(f"Ruta para la salida del scraper selecionada: {ruta_output}")
+        self.output_textedit.append(f"____________________________________________")
+
+
+        # Crea una instancia del controlador del navegador
+        driver = webdriver.Chrome()
+
+        # Navega a la página web que deseas hacer scraping
+        driver.get("https://mister.mundodeportivo.com/new-onboarding/#market")
+
+        # Espera a que se cargue la página
+        driver.implicitly_wait(15)
+
+        # Encuentra el botón de "Consentir" 
+        button = driver.find_element(By.XPATH, '//*[@id="didomi-notice-agree-button"]')
+        # Haz clic en el botón de "Consentir" 
+        button.click()
+
+        # Encuentra el botón de "Siguinete" 
+        button = driver.find_element(By.XPATH, '//*[@id="app"]/div/div[2]/div[2]/button')
+        # Haz clic en el botón de "Siguiente" 
+        button.click()
+        button.click()
+        button.click()
+        button.click()
+
+        # Encuentra el botón de "sing con gmail" 
+        button = driver.find_element(By.XPATH, '//*[@id="app"]/div/div[2]/div/button[3]')
+        button.click()
 
 if __name__ == '__main__':
     import sys
