@@ -11,6 +11,8 @@ import requests
 import openpyxl
 import time
 import os
+import threading
+
 
 class SimpleWindow(QDialog):
     def __init__(self, parent=None):
@@ -25,7 +27,8 @@ class SimpleWindow(QDialog):
         # Variables para almacenar la carpeta y la ruta seleccionadas
         self.selected_folder = ""
         self.selected_path = ""
-
+        
+        self.driver = None
 
         ### SELECCIONAR JORNADA INPUT ####################################################
         # INPUT NÚMERO JORNADA 
@@ -78,8 +81,8 @@ class SimpleWindow(QDialog):
         # Crear un botón llamado "Scrapear"
         scrape_button = QPushButton("Scrapear")
 
-        # Conectar la señal clicked del botón a la función scrapear_funcion
-        scrape_button.clicked.connect(self.scrapear_funcion)
+        # Conectar la señal clicked del botón a la función iniciar_scrapear_thread
+        scrape_button.clicked.connect(self.iniciar_scrapear_thread)
 
         layout.addWidget(scrape_button, 5, 0)
     
@@ -131,36 +134,46 @@ class SimpleWindow(QDialog):
             time.sleep(3) 
             masMenu.click()
 
+    def iniciar_scrapear_thread(self):  
+        # Crear un hilo y ejecutar la función en segundo plano
+        thread = threading.Thread(target=self.scrapear_funcion)
+        thread.start()
+
     def scrapear_funcion(self):
         self.output_textedit.append("Starting scraper...")
 
+        # GESTIÓN DEL INPUT DEL USUARIO
         # Obtener el valor de la jornada desde el QSpinBox
         jornada_a_scrapear = self.number_input.value()
+
         # Mostrar el valor en el QTextEdit
         self.output_textedit.append(f"Jornada seleccionada: {jornada_a_scrapear}")
 
         ruta_output = self.text_input.text()
         # Hacer lo que necesites con la ruta de salida
         self.output_textedit.append(f"Ruta para la salida del scraper selecionada: {ruta_output}")
-        self.output_textedit.append(f"____________________________________________")
+        self.output_textedit.append(f"______________________________________________________________________")
 
-
-        # Crea una instancia del controlador del navegador
-        driver = webdriver.Chrome()
+        if ruta_output=="":
+            self.output_textedit.append("¡La jornada no está inicializada!, Configúrala antes de emepezar a scrapear")
+            self.output_textedit.append(f"______________________________________________________________________")
+            return
+        
+        self.driver = webdriver.Chrome()
 
         # Navega a la página web que deseas hacer scraping
-        driver.get("https://mister.mundodeportivo.com/new-onboarding/#market")
+        self.driver.get("https://mister.mundodeportivo.com/new-onboarding/#market")
 
         # Espera a que se cargue la página
-        driver.implicitly_wait(15)
+        self.driver.implicitly_wait(15)
 
         # Encuentra el botón de "Consentir" 
-        button = driver.find_element(By.XPATH, '//*[@id="didomi-notice-agree-button"]')
+        button = self.driver.find_element(By.XPATH, '//*[@id="didomi-notice-agree-button"]')
         # Haz clic en el botón de "Consentir" 
         button.click()
 
         # Encuentra el botón de "Siguinete" 
-        button = driver.find_element(By.XPATH, '//*[@id="app"]/div/div[2]/div[2]/button')
+        button = self.driver.find_element(By.XPATH, '//*[@id="app"]/div/div[2]/div[2]/button')
         # Haz clic en el botón de "Siguiente" 
         button.click()
         button.click()
@@ -168,9 +181,58 @@ class SimpleWindow(QDialog):
         button.click()
 
         # Encuentra el botón de "sing con gmail" 
-        button = driver.find_element(By.XPATH, '//*[@id="app"]/div/div[2]/div/button[3]')
+        button = self.driver.find_element(By.XPATH, '//*[@id="app"]/div/div[2]/div/button[3]')
         button.click()
 
+        # Localiza el elemento del input gmail
+        inputgmail = self.driver.find_element(By.XPATH, '//*[@id="email"]')
+
+        # Borra cualquier contenido existente en la caja de texto (opcional)
+        inputgmail.clear()
+
+        # Ingresa texto en la caja de texto
+        inputgmail.send_keys("m31_grupo6@outlook.com")
+
+        # Localiza el elemento del input gmail
+        inputpsw = self.driver.find_element(By.XPATH, '//*[@id="app"]/div/div[2]/div/form/div[2]/input')
+
+        # Borra cualquier contenido existente en la caja de texto (opcional)
+        inputpsw.clear()
+
+        # Ingresa texto en la caja de texto
+        inputpsw.send_keys("Chocoflakes2")
+
+        # Encuentra el botón de "sing con gmail" 
+        button = self.driver.find_element(By.XPATH, '//*[@id="app"]/div/div[2]/div/form/div[3]/button')
+        button.click()
+
+        time.sleep(5)
+
+        # Espera a que se cargue la página
+        self.driver.implicitly_wait(10)
+
+        #Hacer click en el btn Jugadores con la función click_mas() para manejar errores generados por anuncios intrusiovos
+        self.click_mas()
+
+        # Pinchar en el botón "Jugaodres" para acceder al listado de jugadores 
+        jugadoresbtn = self.driver.find_element(By.XPATH, '//*[@id="content"]/div[2]/div[1]/button[2]')
+
+        try:
+            jugadoresbtn.click()
+        except (ElementNotInteractableException, NoSuchElementException):
+            # Maneja la excepción y espera antes de intentar nuevamente
+            self.output_textedit.append("Anuncio detectado, reiniciando driver...")
+            self.driver.refresh()
+            time.sleep(3)
+            self.click_mas()
+            time.sleep(3)
+            try:
+                jugadoresbtn = self.driver.find_element(By.XPATH, '//*[@id="content"]/div[2]/div[1]/button[2]')
+                jugadoresbtn.click()
+            except: 
+                self.output_textedit.append("Reinicia el script :(")
+                sys.exit()
+        self.driver.quit()
 if __name__ == '__main__':
     import sys
 
