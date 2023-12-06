@@ -1,4 +1,5 @@
-from PyQt6.QtWidgets import QApplication, QDialog, QGridLayout, QLabel, QLineEdit, QSpinBox, QPushButton, QFileDialog, QWidget
+# Dependencias
+from PyQt6.QtWidgets import QApplication, QDialog, QGridLayout, QLabel, QLineEdit, QSpinBox, QPushButton, QFileDialog, QWidget, QTextEdit
 from PyQt6.QtCore import Qt
 import os
 
@@ -8,13 +9,16 @@ class SimpleWindow(QDialog):
 
         # Crear un diseño de cuadrícula
         layout = QGridLayout(self)
+        # Establecer el tamaño máximo de la segunda columna
+        layout.setColumnStretch(1, 1)
+        layout.setColumnStretch(2, 1)
 
         # Variables para almacenar la carpeta y la ruta seleccionadas
         self.selected_folder = ""
         self.selected_path = ""
 
 
-        ######## SELECCIONAR JORNADA INPUT #########################################################
+        ### SELECCIONAR JORNADA INPUT ####################################################
         # INPUT NÚMERO JORNADA 
         label_number = QLabel("Jornada a scrapear:")
         layout.addWidget(label_number, 0, 0)
@@ -27,15 +31,16 @@ class SimpleWindow(QDialog):
         number_input.setMaximumSize(38, 20)
         number_input.setMinimumSize(38, 20)
         layout.addWidget(number_input, 0, 1)
-      
+        
 
-        # Agregar una fila vacía
+        #------- GAP vacio -----------------------------------------
         empty_widget = QWidget()
         empty_widget.setFixedHeight(10)  # Tamaño del gap (10 px)
-        layout.addWidget(empty_widget, 1, 0)
+        layout.addWidget(empty_widget, 4, 0)
+        #-----------------------------------------------------------
 
 
-        ######## SELECCIONAR RUTA DONDE GUARDAR EL EXCEL OUTPUT DEL SCRAPER ######################
+        ###  SELECCIONAR RUTA DONDE GUARDAR EL EXCEL OUTPUT DEL SCRAPER  #################
         # LABEL TEXTO 
         label_text = QLabel("Ruta output scraper:")
         layout.addWidget(label_text, 2, 0)
@@ -44,6 +49,7 @@ class SimpleWindow(QDialog):
         self.text_input = QLineEdit(self)
         # Estilos input del texto
         self.text_input.setFixedHeight(20)  # Establecer una altura fija
+        self.text_input.setMaximumWidth(500)
         layout.addWidget(self.text_input, 2, 1)
 
         # BOTÓN PARA SELECCIONAR CARPETA
@@ -51,8 +57,31 @@ class SimpleWindow(QDialog):
         select_folder_button.clicked.connect(self.select_folder)
         layout.addWidget(select_folder_button, 3, 0)
 
-        ######## ESTABLECER DISEÑO DE LA VENTANA ###############################################
     
+        #------- GAP vacio -----------------------------------------
+        empty_widget = QWidget()
+        empty_widget.setFixedHeight(10)  # Tamaño del gap (10 px)
+        layout.addWidget(empty_widget, 4, 0)
+        #-----------------------------------------------------------
+
+
+        ###  BOTÓN PARA INICIAR SCRAPER  ################################################
+        # Crear un botón llamado "Scrapear"
+        scrape_button = QPushButton("Scrapear")
+
+        # Conectar la señal clicked del botón a la función scrapear_funcion
+        scrape_button.clicked.connect(self.scrapear_funcion)
+
+        layout.addWidget(scrape_button, 5, 0)
+
+
+        ###  VENTANA OUTPUT SCRAPER  ####################################################
+        # Crear un QTextEdit para la salida
+        self.output_textedit = QTextEdit(self)
+        layout.addWidget(self.output_textedit, 6, 0, 2, 0)  # row, column, rowSpan, columnSpan
+
+
+        ###  ESTABLECER DISEÑO DE LA VENTANA  ###########################################
         self.setMinimumSize(400, 100) # Configurar el tamaño mínimo de la ventana
         # Configurar el diseño para la ventana
         self.setLayout(layout)
@@ -79,6 +108,10 @@ class SimpleWindow(QDialog):
     def cleanup(self):
         # Realizar cualquier limpieza necesaria aquí
         QApplication.quit()
+
+    def scrapear_funcion(self):
+        # Agregar texto al QTextEdit
+        self.output_textedit.append("¡Se hizo clic en el botón Scrapear!")
 
 if __name__ == '__main__':
     import sys
