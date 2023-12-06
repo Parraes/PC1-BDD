@@ -18,6 +18,29 @@ class SimpleWindow(QDialog):
     def __init__(self, parent=None):
         super(SimpleWindow, self).__init__(parent)
 
+        self.teams_data = {
+        "Real Madrid": "https://cdn.gomister.com/file/cdn-common/teams/15.png?version=20231117",
+        "Real Sociedad": "https://cdn.gomister.com/file/cdn-common/teams/16.png?version=20231117",
+        "Atlético de Madrid": "https://cdn.gomister.com/file/cdn-common/teams/2.png?version=20231117",
+        "Girona": "https://cdn.gomister.com/file/cdn-common/teams/222.png?version=20231117",
+        "Osasuna": "https://cdn.gomister.com/file/cdn-common/teams/50.png?version=20231117",
+        "Athletic Club": "https://cdn.gomister.com/file/cdn-common/teams/1.png?version=20231117",
+        "Valencia": "https://cdn.gomister.com/file/cdn-common/teams/19.png?version=20231117",
+        "Granada": "https://cdn.gomister.com/file/cdn-common/teams/10.png?version=20231117",
+        "Getafe": "https://cdn.gomister.com/file/cdn-common/teams/9.png?version=20231117",
+        "Villarreal": "https://cdn.gomister.com/file/cdn-common/teams/20.png?version=20231117",
+        "Las Palmas": "https://cdn.gomister.com/file/cdn-common/teams/11.png?version=20231117",
+        "Mallorca": "https://cdn.gomister.com/file/cdn-common/teams/408.png?version=20231117",
+        "Rayo Vallecano": "https://cdn.gomister.com/file/cdn-common/teams/14.png?version=20231117",
+        "Barcelona": "https://cdn.gomister.com/file/cdn-common/teams/3.png?version=20231117",
+        "Celta de Vigo": "https://cdn.gomister.com/file/cdn-common/teams/5.png?version=20231117",
+        "Cádiz": "https://cdn.gomister.com/file/cdn-common/teams/499.png?version=20231117",
+        "Alavés": "https://cdn.gomister.com/file/cdn-common/teams/48.png?version=20231117",
+        "Almería": "https://cdn.gomister.com/file/cdn-common/teams/21.png?version=20231117",
+        "Sevilla": "https://cdn.gomister.com/file/cdn-common/teams/17.png?version=20231117",
+        "Betis": "https://cdn.gomister.com/file/cdn-common/teams/4.png?version=20231117",
+        }
+
         # Crear un diseño de cuadrícula
         layout = QGridLayout(self)
         # Establecer el tamaño máximo de la segunda columna
@@ -134,6 +157,31 @@ class SimpleWindow(QDialog):
             time.sleep(3) 
             masMenu.click()
 
+    def actualizar_version(self,version):
+      for equipo, url in self.teams_data.items():
+        # Dividir la URL en base al signo de interrogación
+        partes = url.split('?')
+        
+        # Verificar si hay una parte después del signo de interrogación y actualizar la versión
+        if len(partes) > 1:
+            partes[1] = f"version={version}"
+            
+            # Volver a unir las partes para formar la URL actualizada
+            nueva_url = '?'.join(partes)
+            
+            # Actualizar la URL en el diccionario
+            self.teams_data[equipo] = nueva_url
+
+        #print(version)
+        #print("nuevaaaa url-->  ",nueva_url)
+
+    def obtener_valor_por_etiqueta(self,label_deseado):
+        # Función para obtener el valor basado en la etiqueta
+        elemento = self.driver.find_element(By.XPATH, f"//div[@class='item']//div[@class='label' and text()='{label_deseado}']/following-sibling::div[@class='value']")
+        valor = elemento.text
+        return valor
+
+
     def iniciar_scrapear_thread(self):  
         # Crear un hilo y ejecutar la función en segundo plano
         thread = threading.Thread(target=self.scrapear_funcion)
@@ -232,7 +280,97 @@ class SimpleWindow(QDialog):
             except: 
                 self.output_textedit.append("Reinicia el script :(")
                 sys.exit()
-        self.driver.quit()
+
+        pag=2
+        index=0
+        absolute=1
+        jornada_absolute=""
+        while True:
+
+            # Encontrar todos los elementos li
+            elementos_lis = self.driver.find_elements(By.XPATH, "/html/body/div[6]/div[3]/div[3]/ul/li")
+
+            # Longitud de la lista de elementos encontrados
+            length=len(elementos_lis)
+
+            while index < length:
+                # Encontrar todos los elementos li
+                elementos_li = self.driver.find_elements(By.XPATH, "/html/body/div[6]/div[3]/div[3]/ul/li")
+                elementos_li[index].click()
+
+                time.sleep(1)
+                
+                try:
+                    team_logo_element = self.driver.find_element(By.XPATH, "/html/body/div[6]/div[3]/div[2]/div[1]/div/div[1]/div[1]/a/img")
+                except:
+                    try:
+                        team_logo_element = self.driver.find_element(By.XPATH, "/html/body/div[6]/div[3]/div[3]/div/div[3]/div/div[1]/div[2]/img[1]")
+                    except:
+                        team_logo_element = self.driver.find_element(By.XPATH, "/html/body/div[6]/div[3]/div[3]/div/div[3]/div/div[1]/div[2]/img[2]")
+                
+                image_url = team_logo_element.get_attribute("src")
+                # Dividir la URL utilizando el signo de igual como delimitador
+                parts = image_url.split('=')
+                # El valor de version está en la segunda parte después del =
+                version = parts[1]
+                self.actualizar_version(version)
+                
+                if absolute == 1:
+                    # Encontrar jornada 
+                    elementos_principales = self.driver.find_elements(By.CLASS_NAME, 'btn-player-gw')
+
+                    # Iterar sobre cada elemento encontrado
+                    subelemento_gw=None
+                    for elemento_principal in elementos_principales:
+                        # Encontrar subelemento con la clase 'gw' dentro de cada elemento principal
+                        subelemento_gw = elemento_principal.find_element(By.CLASS_NAME, 'gw')
+
+                        # Verificar si el texto # Verificar si el texto coincide con el de la jornada
+                        if subelemento_gw.text == jornada_a_scrapear:
+                            jornada_absolute = subelemento_gw.text
+                            break   
+                absolute = 2
+                
+                #self.extraer_info_jugador(jornada_absolute,jornada_a_scrapear)
+                
+                #Retroceder página
+                self.driver.back()
+                time.sleep(1)
+                elementos_li = self.driver.find_elements(By.XPATH, "/html/body/div[6]/div[3]/div[3]/ul/li")
+                if index == 0:
+                    self.driver.execute_script("arguments[0].scrollIntoView(true);", elementos_li[index])
+                else:
+                    self.driver.execute_script("arguments[0].scrollIntoView(true);", elementos_li[index-1])
+                time.sleep(1)
+                index += 1
+
+            #Pulsar Ver más
+            try:
+                ver_mas = self.driver.find_element(By.XPATH, '/html/body/div[6]/div[3]/div[3]/div[1]/button')
+                ver_mas.click()
+                time.sleep(4)
+            except:
+                break
+
+            #Jugador cambio de pagina
+            elementos_li = self.driver.find_elements(By.XPATH, "/html/body/div[6]/div[3]/div[3]/ul/li")
+            elementos_li[index].click()
+            time.sleep(2)
+            #self.extraer_info_jugador(jornada_absolute,jornada_a_scrapear)
+            self.driver.back()
+            
+            self.output_textedit.append("____________________________________")
+            self.output_textedit.append("------------------------------------")
+            self.output_textedit.append(f"Siguiente página... ({pag})")
+            self.output_textedit.append("------------------------------------")
+            
+            index=1
+            pag+=1
+
+        self.driver.quit()    
+        self.output_textedit.append("Todos los jugadores scrapeados")
+
+
 if __name__ == '__main__':
     import sys
 
