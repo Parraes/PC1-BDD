@@ -1,7 +1,7 @@
 # Dependencias
-from PyQt6.QtWidgets import QApplication, QDialog, QGridLayout, QLabel, QLineEdit, QSpinBox, QPushButton, QFileDialog, QWidget, QTextEdit
+from PyQt6.QtWidgets import QApplication, QDialog, QGridLayout, QLabel, QLineEdit, QSpinBox, QPushButton, QFileDialog, QWidget, QTextEdit, QProgressBar, QVBoxLayout, QTextEdit
 from PyQt6.QtGui import QColor, QTextCharFormat
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import QMetaObject, Qt, pyqtSignal, Q_ARG
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.action_chains import ActionChains
@@ -41,6 +41,8 @@ class SimpleWindow(QDialog):
         "Sevilla": "https://cdn.gomister.com/file/cdn-common/teams/17.png?version=20231117",
         "Betis": "https://cdn.gomister.com/file/cdn-common/teams/4.png?version=20231117",
         }
+
+        self.progress = 0
 
         # Crear un diseño de cuadrícula
         layout = QGridLayout(self)
@@ -108,13 +110,20 @@ class SimpleWindow(QDialog):
         # Crear un botón llamado "Scrapear"
         scrape_button = QPushButton("Scrapear")
 
-        # Conectar la señal clicked del botón a la función iniciar_scrapear_thread
+        # Conectar la señal clicked del botón a la función iniciar_scrapear_thread e iniciar barra progreso
         scrape_button.clicked.connect(self.iniciar_scrapear_thread)
+        scrape_button.clicked.connect(self.start_progress)
 
         # Alineación 
         layout.addWidget(scrape_button, 5, 0)
         # Estilos
         self.number_input.setMaximumSize(38, 20)
+
+
+        ###  BARRA DE PROGRESO  ################################################
+        # Crear Barra de progreso
+        self.progress_bar = QProgressBar(self)
+        layout.addWidget(self.progress_bar)
 
 
         ###  VENTANA OUTPUT SCRAPER  ####################################################
@@ -151,6 +160,14 @@ class SimpleWindow(QDialog):
         # Realizar cualquier limpieza necesaria aquí
         QApplication.quit()
 
+    def start_progress(self):
+        # Establecer el rango de la barra de progreso según tus necesidades
+        self.progress_bar.setRange(0, 511)
+
+        ruta_output = self.text_input.text()
+        if ruta_output!="":
+            self.progress_bar.setValue(0)
+    
     def click_mas(self):
         # Pinchar en el botón del menu "Más"
         masMenu = self.driver.find_element(By.XPATH, '//*[@id="content"]/header/div[2]/ul/li[5]/a')
@@ -401,6 +418,9 @@ class SimpleWindow(QDialog):
         self.output_textedit.append(f"Altura: {altura}")
         self.output_textedit.append(f"Peso: {peso}")
 
+        self.progress += 1
+        self.invocar_actualizacion(self.progress)
+        
         """
         nombre_archivo="output_scraper/"+jornada_absolute+".xlsx"
         jugador = nombre.text + " " + apellido.text
@@ -427,12 +447,13 @@ class SimpleWindow(QDialog):
         wb.save(nombre_archivo)
         """
 
-
     def iniciar_scrapear_thread(self):  
         # Crear un hilo y ejecutar la función en segundo plano
         thread = threading.Thread(target=self.scrapear_funcion)
         thread.start()
 
+    def invocar_actualizacion(self, nuevo_valor):
+        QMetaObject.invokeMethod(self.progress_bar, "setValue", Qt.ConnectionType.QueuedConnection, Q_ARG(int, nuevo_valor))
     def scrapear_funcion(self):
         self.output_textedit.append("Starting scraper...")
 
@@ -447,7 +468,6 @@ class SimpleWindow(QDialog):
         self.output_textedit.append(f"Jornada seleccionada: {jornada_a_scrapear}")
 
         ruta_output = self.text_input.text()
-        # Hacer lo que necesites con la ruta de salida
         self.output_textedit.append(f"Ruta para la salida del scraper selecionada: {ruta_output}")
         self.output_textedit.append(f"________________________________________________________________________________________")
 
@@ -526,7 +546,15 @@ class SimpleWindow(QDialog):
             jugadoresbtn.click()
         except (ElementNotInteractableException, NoSuchElementException):
             # Maneja la excepción y espera antes de intentar nuevamente
-            self.output_textedit.append("Anuncio detectado, reiniciando driver...")
+            output_textedit = self.output_textedit
+            color_rojo = QColor(255, 0, 0)  # Valores RGB para rojo
+            formato_rojo = QTextCharFormat()
+            formato_rojo.setForeground(color_rojo)
+            output_textedit.mergeCurrentCharFormat(formato_rojo)
+            output_textedit.insertPlainText("\nAnuncio detectado, reiniciando driver...")
+            formato_negro = QTextCharFormat()
+            formato_negro.setForeground(QColor(0, 0, 0))
+            output_textedit.mergeCurrentCharFormat(formato_negro)
             self.driver.refresh()
             time.sleep(3)
             self.click_mas()
