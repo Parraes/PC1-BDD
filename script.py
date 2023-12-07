@@ -1,5 +1,6 @@
 # Dependencias
 from PyQt6.QtWidgets import QApplication, QDialog, QGridLayout, QLabel, QLineEdit, QSpinBox, QPushButton, QFileDialog, QWidget, QTextEdit
+from PyQt6.QtGui import QColor, QTextCharFormat
 from PyQt6.QtCore import Qt
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -57,14 +58,14 @@ class SimpleWindow(QDialog):
         # INPUT NÚMERO JORNADA 
         label_number = QLabel("Jornada a scrapear:")
         layout.addWidget(label_number, 0, 0)
-
-        # Estilos input numero jornada
+        # Estilos 
         self.number_input = QSpinBox(self)
-        self.number_input.setMinimum(1)  # Establecer el valor mínimo (jornada 1)
+        self.number_input.setMinimum(11)  # Establecer el valor mínimo (jornada 1)
         self.number_input.setMaximum(38)  # Establecer el valor máximo (Jornada 36)
         self.number_input.setSingleStep(2)  # Establecer el paso
         self.number_input.setMaximumSize(38, 20)
         self.number_input.setMinimumSize(38, 20)
+        # Aliniación
         layout.addWidget(self.number_input, 0, 1)
         
 
@@ -82,17 +83,20 @@ class SimpleWindow(QDialog):
 
         # INPUT TEXTO (QLineEdit en lugar de QSpinBox)
         self.text_input = QLineEdit(self)
-        # Estilos input del texto
-        self.text_input.setFixedHeight(20)  # Establecer una altura fija
-        self.text_input.setMaximumWidth(500)
+        # Alineación
         layout.addWidget(self.text_input, 2, 1)
+        # Estilos 
+        self.text_input.setMinimumWidth(350)
+        
 
         # BOTÓN PARA SELECCIONAR CARPETA
         select_folder_button = QPushButton("Seleccionar Carpeta")
         select_folder_button.clicked.connect(self.select_folder)
-        layout.addWidget(select_folder_button, 3, 0)
+        # Alineación  
+        layout.addWidget(select_folder_button, 3, 1, alignment=Qt.AlignmentFlag.AlignRight)
+        # Estilos 
+        select_folder_button.setMinimumWidth(140)
 
-    
         #------- GAP vacio -----------------------------------------
         empty_widget = QWidget()
         empty_widget.setFixedHeight(10)  # Tamaño del gap (10 px)
@@ -107,8 +111,11 @@ class SimpleWindow(QDialog):
         # Conectar la señal clicked del botón a la función iniciar_scrapear_thread
         scrape_button.clicked.connect(self.iniciar_scrapear_thread)
 
+        # Alineación 
         layout.addWidget(scrape_button, 5, 0)
-    
+        # Estilos
+        self.number_input.setMaximumSize(38, 20)
+
 
         ###  VENTANA OUTPUT SCRAPER  ####################################################
         # Crear un QTextEdit para la salida
@@ -117,7 +124,7 @@ class SimpleWindow(QDialog):
 
 
         ###  ESTABLECER DISEÑO DE LA VENTANA  ###########################################
-        self.setMinimumSize(400, 400) # Configurar el tamaño mínimo de la ventana
+        self.setMinimumSize(500, 500) # Configurar el tamaño mínimo de la ventana
         # Configurar el diseño para la ventana
         self.setLayout(layout)
 
@@ -181,7 +188,6 @@ class SimpleWindow(QDialog):
         valor = elemento.text
         return valor
 
-
     def extraer_info_jugador(self,jornada_absolute,jornada_a_scrapear):
         
         nombre = self.driver.find_element(By.XPATH, "/html/body/div[6]/div[3]/div[2]/div[1]/div/div[1]/div[2]")
@@ -202,9 +208,10 @@ class SimpleWindow(QDialog):
                 
         if peso == "kg":
             peso = None
-            
+
             
         #### OBTENER EQUIPO JUGADOR ####
+
         # Obtener src del equipo
         team_logo_element = self.driver.find_element(By.XPATH, "/html/body/div[6]/div[3]/div[2]/div[1]/div/div[1]/div[1]/a/img")
         image_url = team_logo_element.get_attribute("src")
@@ -265,26 +272,127 @@ class SimpleWindow(QDialog):
                 elif clase == "pos-4":
                     posicion = "DL"
                 break
+
+            
+        #### OBTENER PUNTOS DEL JUGADOR ####
+        # Encontrar jornada 
+        elementos_principales = self.driver.find_elements(By.CLASS_NAME, 'btn-player-gw')
+
+        # Iterar sobre cada elemento encontrado
+        subelemento_gw=None
+        jornada_name=None
+        for elemento_principal in elementos_principales:
+            # Encontrar subelemento con la clase 'gw' dentro de cada elemento principal
+            subelemento_gw = elemento_principal.find_element(By.CLASS_NAME, 'gw')
+
+            # Verificar si el texto coincide con el de la jornada
+            if subelemento_gw.text == jornada_a_scrapear:
+                jornada_name = subelemento_gw.text
+                break             
         
+        if jornada_name ==jornada_absolute:
+            # Encontrar jornada en la web con otro elemennto como referencia
+            localizador = self.driver.find_element(By.XPATH, "//h4[text()='Valor']")
+            self.driver.execute_script("arguments[0].scrollIntoView(true);", localizador)   
+            
+            time.sleep(1)
+            
+            try:
+                subelemento_gw.click()
+            except:
+                elemento_principal.click()
+            
+            time.sleep(2)
+            
+            try:
+                # PUNTOS MISTER FANTASY
+                main_provider = self.driver.find_element(By.CLASS_NAME, 'main-provider')
+                points_element = main_provider.find_element(By.CLASS_NAME, 'points')
+                final_points = points_element.get_attribute('data-points')
+
+                # PUNTOS AS, MARCA Y MUNDO DEPORTIVO 
+                providers_div = self.driver.find_element(By.CLASS_NAME, "providers")
+                li_elements = providers_div.find_elements(By.TAG_NAME, "li")
+
+                points_array = []
+
+                for li_element in li_elements:
+
+                    points_div = li_element.find_element(By.CLASS_NAME, "points")
+                    points_value = points_div.text
+                    points_array.append(points_value)
+
+                as_points=points_array[0]
+                marca_points=points_array[1]
+                mundo_deportivo_points=points_array[2]
+                
+                #### OBTENER PARTIDO ANTERIOR ####
+                # Encontrar el div principal con la clase "player-match"
+                player_match_div = self.driver.find_element(By.CLASS_NAME, "player-match")
+
+                # Encontrar los subelementos dentro del div principal
+                team_1 = player_match_div.find_element(By.CLASS_NAME, "left").find_element(By.CLASS_NAME, "team").text
+                goals_team_1 = [int(goal.text) for goal in player_match_div.find_elements(By.CLASS_NAME, "goals")][0]  
+                goals_team_2 = [int(goal.text) for goal in player_match_div.find_elements(By.CLASS_NAME, "goals")][1]  
+                team_2 = player_match_div.find_element(By.CLASS_NAME, "right").find_element(By.CLASS_NAME, "team").text
+
+                if team_1 == equipo:
+                    ultimo_rival=team_2
+
+                    if goals_team_1 > goals_team_2:
+                        result = "Win"
+                    elif goals_team_1 < goals_team_2:  
+                        result = "Loss"
+                    else:
+                        result = "Draw"
+                else:
+                    ultimo_rival=team_1
+
+                    if goals_team_1 > goals_team_2:
+                        result = "Loss"
+                    elif goals_team_1 < goals_team_2:  
+                        result = "Win"
+                    else:
+                        result = "Draw"
+
+                self.driver.back()
+                
+            except:
+                final_points=None
+                as_points=None
+                marca_points=None
+                mundo_deportivo_points=None
+                ultimo_rival=None
+                result=None
+                
+        else:
+            final_points="NA"
+            as_points="NA"
+            marca_points="NA"
+            mundo_deportivo_points="NA"
+            ultimo_rival="NA"
+            result="NA"
+        
+
         #### IMPRIMIR TODOS LOS DATOS ####
-        self.output_textedit.append("____________________________________")
+        self.output_textedit.append("_____________________________________________")
         self.output_textedit.append(f"- {nombre.text}, {apellido.text}")
         self.output_textedit.append(f"Valor: {valor}")
         self.output_textedit.append(f"Posición: {posicion}")
         self.output_textedit.append(f"Equipo: {equipo}")
             
-        self.output_textedit.append("- - - - - - - - - - - - - - - - - -")
-        """
+        self.output_textedit.append("- - - - - - - - - - - - - - - - - - - - - - - - - -")
+
         self.output_textedit.append(f"Puntuación Fantasy: {final_points}")
         self.output_textedit.append(f"Puntuación Fantasy: {as_points}")
         self.output_textedit.append(f"Puntuación Marca: {marca_points}")
         self.output_textedit.append(f"Puntuación Mundo Deportivo: {mundo_deportivo_points}")
         
-        self.output_textedit.append("- - - - - - - - - - - - - - - - - -")
+        self.output_textedit.append("- - - - - - - - - - - - - - - - - - - - - - - - - -")
             
         self.output_textedit.append(f"Último rival: {ultimo_rival}")
         self.output_textedit.append(f"Resultado del partido: {result}")
-        """
+
         self.output_textedit.append(f"Próximo rival: {proximo_rival}")
         self.output_textedit.append(f"Próximo partido es local: {local}")
         self.output_textedit.append(f"Media en casa: {media_puntos_local}")
@@ -292,6 +400,32 @@ class SimpleWindow(QDialog):
         self.output_textedit.append(f"Edad: {edad}")
         self.output_textedit.append(f"Altura: {altura}")
         self.output_textedit.append(f"Peso: {peso}")
+
+        """
+        nombre_archivo="output_scraper/"+jornada_absolute+".xlsx"
+        jugador = nombre.text + " " + apellido.text
+
+        # Crear un excell o cargar uno existente
+        try:
+            wb = openpyxl.load_workbook(nombre_archivo)
+        except FileNotFoundError:
+            wb = openpyxl.Workbook()
+            sheet = wb.active
+            encabezado = ["Jugador", "Valor", "Posición", "Equipo", "Puntuación Fantasy", "Puntuación AS", "Puntuación Marca", "Puntuación Mundo Deportivo","Último rival","Resultado del partido", "Próximo rival", "Próximo partido es local", "Media en casa", "Media fuera", "Edad", "Altura", "Peso"]
+            sheet.append(encabezado)
+
+        # Seleccionar la hoja activa
+        sheet = wb.active
+            
+        # Lista de variables a almacenar
+        nueva_fila = [jugador, valor, posicion, equipo, final_points, as_points, marca_points, mundo_deportivo_points,ultimo_rival,result,proximo_rival, local, media_puntos_local, media_puntos_visitante, edad, altura, peso]
+        
+        # Escribir la nueva fila en la hoja de cálculo
+        sheet.append(nueva_fila)
+
+        # Guardar el archivo Excel
+        wb.save(nombre_archivo)
+        """
 
 
     def iniciar_scrapear_thread(self):  
@@ -304,7 +438,10 @@ class SimpleWindow(QDialog):
 
         # GESTIÓN DEL INPUT DEL USUARIO
         # Obtener el valor de la jornada desde el QSpinBox
-        jornada_a_scrapear = int(self.number_input.value())
+        numero_jornada = str(self.number_input.value())
+
+        # Concatena 'J' delante del número
+        jornada_a_scrapear = 'J' + numero_jornada
 
         # Mostrar el valor en el QTextEdit
         self.output_textedit.append(f"Jornada seleccionada: {jornada_a_scrapear}")
@@ -312,11 +449,19 @@ class SimpleWindow(QDialog):
         ruta_output = self.text_input.text()
         # Hacer lo que necesites con la ruta de salida
         self.output_textedit.append(f"Ruta para la salida del scraper selecionada: {ruta_output}")
-        self.output_textedit.append(f"______________________________________________________________________")
+        self.output_textedit.append(f"________________________________________________________________________________________")
 
         if ruta_output=="":
-            self.output_textedit.append("¡La jornada no está inicializada!, Configúrala antes de emepezar a scrapear")
-            self.output_textedit.append(f"______________________________________________________________________")
+            output_textedit = self.output_textedit
+            color_rojo = QColor(255, 0, 0)  # Valores RGB para rojo
+            formato_rojo = QTextCharFormat()
+            formato_rojo.setForeground(color_rojo)
+            output_textedit.mergeCurrentCharFormat(formato_rojo)
+            output_textedit.insertPlainText("\n¡La jornada no está inicializada!, Configúrala antes de empezar a scrapear")
+            formato_negro = QTextCharFormat()
+            formato_negro.setForeground(QColor(0, 0, 0))
+            output_textedit.mergeCurrentCharFormat(formato_negro)
+            self.output_textedit.append(f"________________________________________________________________________________________")
             return
         
         self.driver = webdriver.Chrome()
@@ -436,8 +581,8 @@ class SimpleWindow(QDialog):
                     for elemento_principal in elementos_principales:
                         # Encontrar subelemento con la clase 'gw' dentro de cada elemento principal
                         subelemento_gw = elemento_principal.find_element(By.CLASS_NAME, 'gw')
-
-                        # Verificar si el texto # Verificar si el texto coincide con el de la jornada
+                        
+                        # Verificar si el texto coincide con el de la jornada
                         if subelemento_gw.text == jornada_a_scrapear:
                             jornada_absolute = subelemento_gw.text
                             break   
@@ -481,7 +626,6 @@ class SimpleWindow(QDialog):
 
         self.driver.quit()    
         self.output_textedit.append("Todos los jugadores scrapeados")
-
 
 if __name__ == '__main__':
     import sys
