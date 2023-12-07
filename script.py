@@ -117,7 +117,7 @@ class SimpleWindow(QDialog):
 
 
         ###  ESTABLECER DISEÑO DE LA VENTANA  ###########################################
-        self.setMinimumSize(400, 100) # Configurar el tamaño mínimo de la ventana
+        self.setMinimumSize(400, 400) # Configurar el tamaño mínimo de la ventana
         # Configurar el diseño para la ventana
         self.setLayout(layout)
 
@@ -182,6 +182,118 @@ class SimpleWindow(QDialog):
         return valor
 
 
+    def extraer_info_jugador(self,jornada_absolute,jornada_a_scrapear):
+        
+        nombre = self.driver.find_element(By.XPATH, "/html/body/div[6]/div[3]/div[2]/div[1]/div/div[1]/div[2]")
+        apellido = self.driver.find_element(By.XPATH, " /html/body/div[6]/div[3]/div[2]/div[1]/div/div[1]/div[3]")
+        valorS= self.driver.find_element(By.XPATH,'/html/body/div[6]/div[3]/div[2]/div[2]/div/div/div[1]/div[2]')
+        valor=valorS.text
+
+        media_puntos_local = self.obtener_valor_por_etiqueta("Media en casa")
+        media_puntos_visitante = self.obtener_valor_por_etiqueta("Media fuera")
+        try:
+            edad = self.obtener_valor_por_etiqueta("Edad")
+            altura = self.obtener_valor_por_etiqueta("Altura")
+            peso = self.obtener_valor_por_etiqueta("Peso")
+        except:
+            edad = None
+            altura = None
+            peso = None
+                
+        if peso == "kg":
+            peso = None
+            
+            
+        #### OBTENER EQUIPO JUGADOR ####
+        # Obtener src del equipo
+        team_logo_element = self.driver.find_element(By.XPATH, "/html/body/div[6]/div[3]/div[2]/div[1]/div/div[1]/div[1]/a/img")
+        image_url = team_logo_element.get_attribute("src")
+
+        # Comparar la URL de la imagen con las URLs en teams_data
+        equipo = None
+        proximo_rival=None
+        local= False
+        for equipo_nombre, equipo_url in self.teams_data.items():
+            if image_url == equipo_url:
+                equipo = equipo_nombre
+                
+                #### OBTENER RESULTADO ÚLTIMO PARTIDO ####
+                try:
+                    divpartido = self.driver.find_element(By.XPATH, "/html/body/div[6]/div[3]/div[3]/div[1]/div[3]/div")
+                except:
+                    divpartido = self.driver.find_element(By.XPATH, "/html/body/div[6]/div[3]/div[3]/div/div[2]/div")
+                
+                # Encuentra el div del partido
+                item_elements = divpartido.find_elements(By.CLASS_NAME, 'item')
+            
+                # Encuentra las imágenes dentro del div partido
+                img_elements = item_elements[0].find_elements(By.CLASS_NAME, 'team-logo')
+
+                # Guarda las src de las imágenes en variables
+                if len(img_elements) >= 2:
+                    src_img1 = img_elements[0].get_attribute('src')
+                    src_img2 = img_elements[1].get_attribute('src')
+                    if src_img1 == image_url:
+                        local = True
+                        for equipo_nombre, equipo_url in self.teams_data.items():
+                            if src_img2 == equipo_url:
+                                proximo_rival=equipo_nombre
+                    else:
+                        local=False
+                        for equipo_nombre, equipo_url in self.teams_data.items():
+                            if src_img1 == equipo_url:
+                                proximo_rival=equipo_nombre
+                else:
+                    print("No se encontro el próximo partido")
+                
+
+        #### OBTENER POSICIÓN DEL JUGADOR ####
+        elemento = self.driver.find_element(By.XPATH, '//i[contains(@class, "pos-")]')
+        # Obtener el valor del atributo class
+        clases = elemento.get_attribute("class").split()
+
+        # Determinar la posición
+        posicion = None
+        for clase in clases:
+            if clase.startswith("pos-") and "pos-big" in clases:
+                if clase == "pos-1":
+                    posicion = "PT"
+                elif clase == "pos-2":
+                    posicion = "DF"
+                elif clase == "pos-3":
+                    posicion = "MC"
+                elif clase == "pos-4":
+                    posicion = "DL"
+                break
+        
+        #### IMPRIMIR TODOS LOS DATOS ####
+        self.output_textedit.append("____________________________________")
+        self.output_textedit.append(f"- {nombre.text}, {apellido.text}")
+        self.output_textedit.append(f"Valor: {valor}")
+        self.output_textedit.append(f"Posición: {posicion}")
+        self.output_textedit.append(f"Equipo: {equipo}")
+            
+        self.output_textedit.append("- - - - - - - - - - - - - - - - - -")
+        """
+        self.output_textedit.append(f"Puntuación Fantasy: {final_points}")
+        self.output_textedit.append(f"Puntuación Fantasy: {as_points}")
+        self.output_textedit.append(f"Puntuación Marca: {marca_points}")
+        self.output_textedit.append(f"Puntuación Mundo Deportivo: {mundo_deportivo_points}")
+        
+        self.output_textedit.append("- - - - - - - - - - - - - - - - - -")
+            
+        self.output_textedit.append(f"Último rival: {ultimo_rival}")
+        self.output_textedit.append(f"Resultado del partido: {result}")
+        """
+        self.output_textedit.append(f"Próximo rival: {proximo_rival}")
+        self.output_textedit.append(f"Próximo partido es local: {local}")
+        self.output_textedit.append(f"Media en casa: {media_puntos_local}")
+        self.output_textedit.append(f"Media fuera: {media_puntos_visitante}")
+        self.output_textedit.append(f"Edad: {edad}")
+        self.output_textedit.append(f"Altura: {altura}")
+        self.output_textedit.append(f"Peso: {peso}")
+
+
     def iniciar_scrapear_thread(self):  
         # Crear un hilo y ejecutar la función en segundo plano
         thread = threading.Thread(target=self.scrapear_funcion)
@@ -192,7 +304,7 @@ class SimpleWindow(QDialog):
 
         # GESTIÓN DEL INPUT DEL USUARIO
         # Obtener el valor de la jornada desde el QSpinBox
-        jornada_a_scrapear = self.number_input.value()
+        jornada_a_scrapear = int(self.number_input.value())
 
         # Mostrar el valor en el QTextEdit
         self.output_textedit.append(f"Jornada seleccionada: {jornada_a_scrapear}")
@@ -331,7 +443,7 @@ class SimpleWindow(QDialog):
                             break   
                 absolute = 2
                 
-                #self.extraer_info_jugador(jornada_absolute,jornada_a_scrapear)
+                self.extraer_info_jugador(jornada_absolute,jornada_a_scrapear)
                 
                 #Retroceder página
                 self.driver.back()
@@ -356,7 +468,7 @@ class SimpleWindow(QDialog):
             elementos_li = self.driver.find_elements(By.XPATH, "/html/body/div[6]/div[3]/div[3]/ul/li")
             elementos_li[index].click()
             time.sleep(2)
-            #self.extraer_info_jugador(jornada_absolute,jornada_a_scrapear)
+            self.extraer_info_jugador(jornada_absolute,jornada_a_scrapear)
             self.driver.back()
             
             self.output_textedit.append("____________________________________")
