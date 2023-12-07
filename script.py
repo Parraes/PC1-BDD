@@ -393,7 +393,7 @@ class SimpleWindow(QDialog):
 
         #### IMPRIMIR TODOS LOS DATOS ####
         self.output_textedit.append("_____________________________________________")
-        self.output_textedit.append(f"- {nombre.text}, {apellido.text}")
+        self.output_textedit.append(f"-{self.progress+1}. {nombre.text}, {apellido.text}")
         self.output_textedit.append(f"Valor: {valor}")
         self.output_textedit.append(f"Posición: {posicion}")
         self.output_textedit.append(f"Equipo: {equipo}")
@@ -420,33 +420,36 @@ class SimpleWindow(QDialog):
 
         self.progress += 1
         self.invocar_actualizacion(self.progress)
-        
-        """
-        nombre_archivo="output_scraper/"+jornada_absolute+".xlsx"
+
+        #Definir ruta donde guardar el output del scraper
+        ruta_output = self.text_input.text()
+        save_as=f"{ruta_output}/"+jornada_absolute+".xlsx"
+        self.output_textedit.append(save_as)
         jugador = nombre.text + " " + apellido.text
 
-        # Crear un excell o cargar uno existente
         try:
-            wb = openpyxl.load_workbook(nombre_archivo)
+            wb = openpyxl.load_workbook(save_as)
         except FileNotFoundError:
+            # Crear un nuevo libro de trabajo y una hoja
             wb = openpyxl.Workbook()
             sheet = wb.active
-            encabezado = ["Jugador", "Valor", "Posición", "Equipo", "Puntuación Fantasy", "Puntuación AS", "Puntuación Marca", "Puntuación Mundo Deportivo","Último rival","Resultado del partido", "Próximo rival", "Próximo partido es local", "Media en casa", "Media fuera", "Edad", "Altura", "Peso"]
+            encabezado = ["Jugador", "Valor", "Posición", "Equipo", "Puntuación Fantasy", "Puntuación AS", "Puntuación Marca", "Puntuación Mundo Deportivo", "Último rival", "Resultado del partido", "Próximo rival", "Próximo partido es local", "Media en casa", "Media fuera", "Edad", "Altura", "Peso"]
             sheet.append(encabezado)
+            # Guardar el archivo Excel
+            wb.save(save_as)
 
         # Seleccionar la hoja activa
         sheet = wb.active
-            
+
         # Lista de variables a almacenar
-        nueva_fila = [jugador, valor, posicion, equipo, final_points, as_points, marca_points, mundo_deportivo_points,ultimo_rival,result,proximo_rival, local, media_puntos_local, media_puntos_visitante, edad, altura, peso]
-        
+        nueva_fila = [jugador, valor, posicion, equipo, final_points, as_points, marca_points, mundo_deportivo_points, ultimo_rival, result, proximo_rival, local, media_puntos_local, media_puntos_visitante, edad, altura, peso]
+
         # Escribir la nueva fila en la hoja de cálculo
         sheet.append(nueva_fila)
 
         # Guardar el archivo Excel
-        wb.save(nombre_archivo)
-        """
-
+        wb.save(save_as)
+        
     def iniciar_scrapear_thread(self):  
         # Crear un hilo y ejecutar la función en segundo plano
         thread = threading.Thread(target=self.scrapear_funcion)
@@ -484,6 +487,10 @@ class SimpleWindow(QDialog):
             self.output_textedit.append(f"________________________________________________________________________________________")
             return
         
+        rutaDel=f"{ruta_output}/"+jornada_a_scrapear+".xlsx"
+        if os.path.exists(rutaDel):
+             os.remove(rutaDel)
+
         self.driver = webdriver.Chrome()
 
         # Navega a la página web que deseas hacer scraping
