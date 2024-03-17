@@ -167,19 +167,19 @@ class SimpleWindow(QDialog):
         ruta_output = self.text_input.text()
         if ruta_output!="":
             self.progress_bar.setValue(0)
-    
-    def click_mas(self):
-        # Pinchar en el botón del menu "Más"
-        masMenu = self.driver.find_element(By.XPATH, '//*[@id="content"]/header/div[2]/ul/li[5]/a')
 
-        try:
-            masMenu.click()
-        except (ElementNotInteractableException, NoSuchElementException):
-            # Maneja la excepción y espera antes de intentar nuevamente
-            print("Anuncio detectado, reiniciando driver...")
-            self.driver.refresh()
-            time.sleep(3) 
-            masMenu.click()
+    def click_mas(self):
+        while True:  # Loop para intentar hacer clic en el botón "Más"
+            try:
+                # Pinchar en el botón del menu "Más"
+                masMenu = self.driver.find_element(By.XPATH, '//*[@id="content"]/header/div[2]/ul/li[5]/a')
+                masMenu.click()
+                break  # Si el clic tiene éxito, sal del bucle
+            except ():
+                # Maneja la excepción y espera antes de intentar nuevamente
+                print("Anuncio detectado, reiniciando driver...")
+                self.driver.refresh()
+                time.sleep(3)
 
     def actualizar_version(self,version):
       for equipo, url in self.teams_data.items():
@@ -505,12 +505,18 @@ class SimpleWindow(QDialog):
         button.click()
 
         # Encuentra el botón de "Siguinete" 
-        button = self.driver.find_element(By.XPATH, '//*[@id="app"]/div/div[2]/div[2]/button')
+        button = self.driver.find_element(By.CLASS_NAME, "btn--capsule") 
         # Haz clic en el botón de "Siguiente" 
         button.click()
+        time.sleep(1)
         button.click()
+        time.sleep(1)
         button.click()
+        time.sleep(1)
+        button = self.driver.find_element(By.CLASS_NAME, "btn--capsule") 
         button.click()
+        time.sleep(1)
+        
 
         # Encuentra el botón de "sing con gmail" 
         button = self.driver.find_element(By.XPATH, '//*[@id="app"]/div/div[2]/div/button[3]')
@@ -538,8 +544,6 @@ class SimpleWindow(QDialog):
         button = self.driver.find_element(By.XPATH, '//*[@id="app"]/div/div[2]/div/form/div[3]/button')
         button.click()
 
-        time.sleep(5)
-
         # Espera a que se cargue la página
         self.driver.implicitly_wait(10)
 
@@ -547,7 +551,7 @@ class SimpleWindow(QDialog):
         self.click_mas()
 
         # Pinchar en el botón "Jugaodres" para acceder al listado de jugadores 
-        jugadoresbtn = self.driver.find_element(By.XPATH, '//*[@id="content"]/div[2]/div[1]/button[2]')
+        jugadoresbtn = self.driver.find_element(By.XPATH, '//*[@id="turbo-content"]/div[1]/div[1]/button[2]')
 
         try:
             jugadoresbtn.click()
